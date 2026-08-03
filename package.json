@@ -1,0 +1,13 @@
+{
+  "name": "vaultly",
+  "version": "1.0.0",
+  "description": "Self-hosted personal paste and file sharing service",
+  "private": true,
+  "scripts": {
+    "install:all": "npm install && npm install --prefix server && npm install --prefix web",
+    "dev": "concurrently \"npm run dev --prefix server\" \"npm run dev --prefix web\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

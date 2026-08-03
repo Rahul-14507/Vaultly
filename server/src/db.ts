@@ -1,0 +1,26 @@
+import Database from "better-sqlite3";
+import path from "node:path";
+import fs from "node:fs";
+import { fileURLToPath } from "node:url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const dataDir = path.join(__dirname, "..", "data");
+if (!fs.existsSync(dataDir)) {
+  fs.mkdirSync(dataDir, { recursive: true });
+}
+
+export const db = new Database(path.join(dataDir, "vaultly.db"));
+db.pragma("journal_mode = WAL");
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS pastes (
+    id TEXT PRIMARY KEY,
+    content TEXT NOT NULL,
+    language TEXT DEFAULT 'plaintext',
+    created_at INTEGER NOT NULL,
+    expires_at INTEGER,
+    views INTEGER DEFAULT 0
+  );
+`);
