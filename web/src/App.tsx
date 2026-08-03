@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
-import { Routes, Route, useNavigate } from "react-router-dom";
+import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import Sidebar from "./components/Sidebar.tsx";
 import NewPaste from "./pages/NewPaste.tsx";
 import ViewPaste from "./pages/ViewPaste.tsx";
 import NotFound from "./pages/NotFound.tsx";
+import { Menu } from "lucide-react";
 
 interface RecentPaste {
   id: string;
@@ -13,7 +14,14 @@ interface RecentPaste {
 
 export default function App() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [recentPastes, setRecentPastes] = useState<RecentPaste[]>([]);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Close sidebar on route change (mobile nav)
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [location.pathname]);
 
   // Load recents on mount
   useEffect(() => {
@@ -42,7 +50,7 @@ export default function App() {
     });
   };
 
-  // Global keydown listeners for shortcuts
+  // Global keydown listeners for shortcuts (desktop only)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const activeEl = document.activeElement;
@@ -54,7 +62,6 @@ export default function App() {
 
       if (isInput) return;
 
-      // 'N' navigates to new paste
       if (e.key === "n" || e.key === "N") {
         e.preventDefault();
         navigate("/");
@@ -66,12 +73,43 @@ export default function App() {
   }, [navigate]);
 
   return (
-    <div className="flex h-screen bg-background text-ui-textMain overflow-hidden font-sans">
-      {/* Sidebar navigation panel */}
-      <Sidebar recentPastes={recentPastes} />
+    <div className="flex h-[100dvh] bg-background text-ui-textMain overflow-hidden font-sans">
+      {/* Mobile sidebar overlay backdrop */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-20 bg-black/60 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
 
-      {/* Main workspace panels */}
-      <main className="flex-1 flex flex-col h-full overflow-hidden bg-background">
+      {/* Sidebar — fixed on mobile (slide-in), static on desktop */}
+      <div
+        className={`
+          fixed inset-y-0 left-0 z-30 transition-transform duration-200 ease-in-out
+          md:static md:translate-x-0 md:z-auto
+          ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
+        `}
+      >
+        <Sidebar
+          recentPastes={recentPastes}
+          onClose={() => setSidebarOpen(false)}
+        />
+      </div>
+
+      {/* Main workspace */}
+      <main className="flex-1 flex flex-col h-full min-w-0 overflow-hidden bg-background">
+        {/* Mobile top bar */}
+        <div className="flex items-center gap-3 px-3 h-11 border-b border-ui-border bg-panel md:hidden shrink-0">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="p-1.5 text-ui-textMuted hover:text-ui-textMain transition-colors"
+            aria-label="Open sidebar"
+          >
+            <Menu className="w-4 h-4" />
+          </button>
+          <span className="font-mono text-xs font-bold text-ui-textMain tracking-widest">VAULTLY</span>
+        </div>
+
         <Routes>
           <Route path="/" element={<NewPaste onPasteCreated={addRecentPaste} />} />
           <Route path="/p/:id" element={<ViewPaste />} />

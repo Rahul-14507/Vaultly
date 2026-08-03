@@ -3,12 +3,27 @@
 @tailwind utilities;
 
 @layer base {
+  html {
+    /* Prevent iOS rubber-band bounce on the document root */
+    overscroll-behavior: none;
+    /* Prevent text size inflation on orientation change */
+    -webkit-text-size-adjust: 100%;
+  }
+
   body {
     background-color: #0A0A0C;
     color: #E4E4E7;
     font-family: 'IBM Plex Sans', 'Inter', sans-serif;
+    /* Prevent overscroll bounce on body itself */
+    overscroll-behavior: none;
+  }
+
+  /* Ensure selects and buttons have comfortable tap targets on mobile */
+  select, button, a {
+    -webkit-tap-highlight-color: transparent;
   }
 }
+
 
 /* Custom Scrollbar to maintain high visual density */
 ::-webkit-scrollbar {
