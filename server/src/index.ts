@@ -29,7 +29,7 @@ app.use("/api/auth", authRouter);
 function cleanupExpiredResources() {
   try {
     const now = Date.now();
-    
+
     // Pastes cleanup
     const resultPastes = db.prepare("DELETE FROM pastes WHERE expires_at IS NOT NULL AND expires_at < ?").run(now);
     if (resultPastes.changes > 0) {
@@ -49,7 +49,7 @@ function cleanupExpiredResources() {
           console.error(`[Cleanup] Failed to delete file directory for ID ${file.id}:`, diskErr);
         }
       }
-      
+
       const resultFiles = db.prepare("DELETE FROM files WHERE expires_at IS NOT NULL AND expires_at < ?").run(now);
       console.log(`[Cleanup] Purged ${resultFiles.changes} expired file(s) from disk and database.`);
     }
@@ -68,9 +68,9 @@ if (process.env.NODE_ENV === "production") {
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
   const frontendDist = path.join(__dirname, "../../web/dist");
-  
+
   app.use(express.static(frontendDist));
-  
+
   // Return frontend SPA router for any non-API routes
   app.get("*", (req, res) => {
     res.sendFile(path.join(frontendDist, "index.html"));
@@ -88,6 +88,6 @@ app.use((err: Error, req: express.Request, res: express.Response, next: express.
   res.status(500).json({ error: "Internal Server Error" });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`Vaultly server listening on port ${PORT} (env: ${process.env.NODE_ENV || "development"})`);
 });
