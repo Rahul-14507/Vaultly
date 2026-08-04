@@ -1,15 +1,13 @@
+import "./loadEnv.js";
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
 import path from "node:path";
+import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 import { db } from "./db.js";
 import pastesRouter from "./routes/pastes.js";
 import filesRouter from "./routes/files.js";
 import authRouter from "./routes/auth.js";
-
-// Load environment variables
-dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -27,23 +25,43 @@ app.use("/api/pastes", pastesRouter);
 app.use("/api/files", filesRouter);
 app.use("/api/auth", authRouter);
 
-// Background job to cleanup expired pastes
-function cleanupExpiredPastes() {
+// Background job to cleanup expired resources (pastes and files)
+function cleanupExpiredResources() {
   try {
     const now = Date.now();
-    const result = db.prepare("DELETE FROM pastes WHERE expires_at IS NOT NULL AND expires_at < ?").run(now);
-    if (result.changes > 0) {
-      console.log(`[Cleanup] Purged ${result.changes} expired paste(s) from database.`);
+    
+    // Pastes cleanup
+    const resultPastes = db.prepare("DELETE FROM pastes WHERE expires_at IS NOT NULL AND expires_at < ?").run(now);
+    if (resultPastes.changes > 0) {
+      console.log(`[Cleanup] Purged ${resultPastes.changes} expired paste(s) from database.`);
+    }
+
+    // Files cleanup
+    const expiredFiles = db.prepare("SELECT id, stored_path FROM files WHERE expires_at IS NOT NULL AND expires_at < ?").all(now) as { id: string; stored_path: string }[];
+    if (expiredFiles.length > 0) {
+      for (const file of expiredFiles) {
+        try {
+          const dirPath = path.dirname(file.stored_path);
+          if (fs.existsSync(dirPath)) {
+            fs.rmSync(dirPath, { recursive: true, force: true });
+          }
+        } catch (diskErr) {
+          console.error(`[Cleanup] Failed to delete file directory for ID ${file.id}:`, diskErr);
+        }
+      }
+      
+      const resultFiles = db.prepare("DELETE FROM files WHERE expires_at IS NOT NULL AND expires_at < ?").run(now);
+      console.log(`[Cleanup] Purged ${resultFiles.changes} expired file(s) from disk and database.`);
     }
   } catch (error) {
-    console.error("[Cleanup] Error running expired pastes cleanup:", error);
+    console.error("[Cleanup] Error running resource cleanup:", error);
   }
 }
 
 // Run cleanup immediately on boot, and then every 10 minutes
-cleanupExpiredPastes();
+cleanupExpiredResources();
 const CLEANUP_INTERVAL = 10 * 60 * 1000; // 10 minutes
-setInterval(cleanupExpiredPastes, CLEANUP_INTERVAL);
+setInterval(cleanupExpiredResources, CLEANUP_INTERVAL);
 
 // Serve frontend assets in production
 if (process.env.NODE_ENV === "production") {

@@ -4,6 +4,8 @@ import { Terminal, Send, AlertTriangle } from "lucide-react";
 
 interface NewPasteProps {
   onPasteCreated: (id: string, language: string) => void;
+  token: string | null;
+  onUnauthorized: () => void;
 }
 
 const LANGUAGES = [
@@ -27,7 +29,7 @@ const EXPIRY_OPTIONS = [
   { value: "never", label: "Never" },
 ];
 
-export default function NewPaste({ onPasteCreated }: NewPasteProps) {
+export default function NewPaste({ onPasteCreated, token, onUnauthorized }: NewPasteProps) {
   const navigate = useNavigate();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -92,11 +94,18 @@ export default function NewPaste({ onPasteCreated }: NewPasteProps) {
     try {
       const response = await fetch("/api/pastes", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...(token ? { "Authorization": `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({ content, language, expiresInHours }),
       });
 
       if (!response.ok) {
+        if (response.status === 401) {
+          onUnauthorized();
+          return;
+        }
         const errData = await response.json();
         throw new Error(errData.error || "Failed to create paste");
       }

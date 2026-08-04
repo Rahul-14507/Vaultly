@@ -1,13 +1,14 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { db } from "../db.js";
 import { newShortId } from "../utils/shortId.js";
+import { requireAuth } from "../middleware/auth.js";
 
 const router = Router();
 
 // POST /api/pastes
 // Request body: { content, language?, expiresInHours? }
 // Response: { id, url }
-router.post("/", (req: Request, res: Response, next: NextFunction) => {
+router.post("/", requireAuth, (req: Request, res: Response, next: NextFunction) => {
   try {
     const { content, language = "plaintext", expiresInHours } = req.body;
 
@@ -115,8 +116,7 @@ router.get("/:id", (req: Request, res: Response, next: NextFunction) => {
 });
 
 // DELETE /api/pastes/:id
-// TODO: Phase 3 - Add Authentication middleware here so only owner/authorized users can delete.
-router.delete("/:id", (req: Request, res: Response, next: NextFunction) => {
+router.delete("/:id", requireAuth, (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     const stmt = db.prepare("DELETE FROM pastes WHERE id = ?");

@@ -11,6 +11,11 @@ if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
 
+const uploadsDir = path.join(dataDir, "uploads");
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
 export const db = new Database(path.join(dataDir, "vaultly.db"));
 db.pragma("journal_mode = WAL");
 
@@ -22,5 +27,16 @@ db.exec(`
     created_at INTEGER NOT NULL,
     expires_at INTEGER,
     views INTEGER DEFAULT 0
+  );
+
+  CREATE TABLE IF NOT EXISTS files (
+    id TEXT PRIMARY KEY,
+    original_name TEXT NOT NULL,
+    stored_path TEXT NOT NULL,
+    mime_type TEXT,
+    size_bytes INTEGER NOT NULL,
+    created_at INTEGER NOT NULL,
+    expires_at INTEGER,
+    downloads INTEGER DEFAULT 0
   );
 `);
