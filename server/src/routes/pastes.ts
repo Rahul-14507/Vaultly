@@ -28,12 +28,14 @@ router.post("/", requireAuth, (req: Request, res: Response, next: NextFunction) 
       }
     }
 
+    const userId = (req as any).userId;
+
     const stmt = db.prepare(`
-      INSERT INTO pastes (id, content, language, created_at, expires_at)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO pastes (id, content, language, created_at, expires_at, user_id)
+      VALUES (?, ?, ?, ?, ?, ?)
     `);
     
-    stmt.run(id, content, language, createdAt, expiresAt);
+    stmt.run(id, content, language, createdAt, expiresAt, userId);
 
     // Provide relative URL; frontend can resolve it relative to its origin.
     res.status(201).json({ id, url: `/p/${id}` });
@@ -119,14 +121,21 @@ router.get("/:id", (req: Request, res: Response, next: NextFunction) => {
 router.delete("/:id", requireAuth, (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    const stmt = db.prepare("DELETE FROM pastes WHERE id = ?");
-    const result = stmt.run(id);
+    const userId = (req as any).userId;
 
-    if (result.changes === 0) {
+    const paste = db.prepare("SELECT user_id FROM pastes WHERE id = ?").get(id) as { user_id: string | null } | undefined;
+
+    if (!paste) {
       res.status(404).json({ error: "Paste not found" });
       return;
     }
 
+    if (paste.user_id && paste.user_id !== userId) {
+      res.status(403).json({ error: "Forbidden: You do not own this paste" });
+      return;
+    }
+
+    db.prepare("DELETE FROM pastes WHERE id = ?").run(id);
     res.status(204).end();
   } catch (error) {
     next(error);

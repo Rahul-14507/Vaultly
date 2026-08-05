@@ -20,6 +20,7 @@ export default function App() {
   const navigate = useNavigate();
   const location = useLocation();
   const [token, setToken] = useState<string | null>(null);
+  const [username, setUsername] = useState<string | null>(null);
   const [recentItems, setRecentItems] = useState<RecentItem[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -28,16 +29,22 @@ export default function App() {
     setSidebarOpen(false);
   }, [location.pathname]);
 
-  // Load token and recents on mount
+  // Load token and username on mount
   useEffect(() => {
     const storedToken = localStorage.getItem("vaultly_token");
+    const storedUsername = localStorage.getItem("vaultly_username");
+    
     if (storedToken) {
       setToken(storedToken);
     }
+    if (storedUsername) {
+      setUsername(storedUsername);
+    }
 
     try {
+      // Legacy compatibility: check if there's old storage recents, but we migrate to server history
       const storedRecents = localStorage.getItem("vaultly_recents");
-      if (storedRecents) {
+      if (storedRecents && !storedToken) {
         setRecentItems(JSON.parse(storedRecents));
       }
     } catch (e) {
@@ -45,30 +52,56 @@ export default function App() {
     }
   }, []);
 
-  const handleLoginSuccess = (newToken: string) => {
+  // Fetch chronological user history from database
+  const fetchHistory = async (tokenToUse: string | null) => {
+    const activeToken = tokenToUse || token;
+    if (!activeToken) return;
+
+    try {
+      const response = await fetch("/api/auth/history", {
+        headers: {
+          "Authorization": `Bearer ${activeToken}`
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setRecentItems(data);
+      } else if (response.status === 401) {
+        handleLogout();
+      }
+    } catch (e) {
+      console.error("Failed to fetch user history from database", e);
+    }
+  };
+
+  // Trigger history fetch when token changes
+  useEffect(() => {
+    if (token) {
+      fetchHistory(token);
+    } else {
+      setRecentItems([]);
+    }
+  }, [token]);
+
+  const handleLoginSuccess = (newToken: string, newUsername: string) => {
     localStorage.setItem("vaultly_token", newToken);
+    localStorage.setItem("vaultly_username", newUsername);
     setToken(newToken);
+    setUsername(newUsername);
   };
 
   const handleLogout = () => {
     localStorage.removeItem("vaultly_token");
+    localStorage.removeItem("vaultly_username");
     setToken(null);
+    setUsername(null);
+    setRecentItems([]);
     navigate("/login");
   };
 
   const isAuthenticated = !!token;
 
-  // Add item (paste or file) to recent history
-  const addRecentItem = (item: RecentItem) => {
-    setRecentItems((prev) => {
-      const filtered = prev.filter((p) => p.id !== item.id);
-      const updated = [item, ...filtered].slice(0, 15);
-      localStorage.setItem("vaultly_recents", JSON.stringify(updated));
-      return updated;
-    });
-  };
-
-  // Keyboard shortcut listener (desktop only, only if authenticated)
+  // Global keydown listener for shortcuts (desktop only, authenticated only)
   useEffect(() => {
     if (!isAuthenticated) return;
 
@@ -115,8 +148,9 @@ export default function App() {
           isAuthenticated={isAuthenticated}
           onLogout={handleLogout}
           token={token}
-          onItemUploaded={addRecentItem}
+          onItemUploaded={() => fetchHistory(token)}
           onClose={() => setSidebarOpen(false)}
+          username={username}
         />
       </div>
 
@@ -136,12 +170,15 @@ export default function App() {
           </div>
           
           {isAuthenticated && (
-            <button 
-              onClick={handleLogout}
-              className="text-[10px] font-mono text-rose-400 border border-rose-950 px-2 py-0.5"
-            >
-              LOGOUT
-            </button>
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-[10px] text-accent font-semibold">{username}</span>
+              <button 
+                onClick={handleLogout}
+                className="text-[10px] font-mono text-rose-400 border border-rose-950 px-2 py-0.5"
+              >
+                LOGOUT
+              </button>
+            </div>
           )}
         </div>
 
@@ -151,7 +188,7 @@ export default function App() {
             element={
               isAuthenticated ? (
                 <NewPaste 
-                  onPasteCreated={(id, lang) => addRecentItem({ id, type: "paste", language: lang, created_at: Date.now() })} 
+                  onPasteCreated={() => fetchHistory(token)} 
                   token={token} 
                   onUnauthorized={handleLogout} 
                 />

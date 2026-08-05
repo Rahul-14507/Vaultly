@@ -72,12 +72,14 @@ router.post("/", requireAuth, (req: Request, res: Response, next: NextFunction) 
         }
       }
 
+      const userId = (req as any).userId;
+
       // Store in DB
       const stmt = db.prepare(`
-        INSERT INTO files (id, original_name, stored_path, mime_type, size_bytes, created_at, expires_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO files (id, original_name, stored_path, mime_type, size_bytes, created_at, expires_at, user_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `);
-      stmt.run(fileId, originalName, storedPath, mimeType, sizeBytes, createdAt, expiresAt);
+      stmt.run(fileId, originalName, storedPath, mimeType, sizeBytes, createdAt, expiresAt, userId);
 
       res.status(201).json({
         id: fileId,
@@ -204,11 +206,17 @@ router.get("/:id", (req: Request, res: Response, next: NextFunction) => {
 router.delete("/:id", requireAuth, (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    const stmt = db.prepare("SELECT stored_path FROM files WHERE id = ?");
-    const file = stmt.get(id) as { stored_path: string } | undefined;
+    const userId = (req as any).userId;
+    const stmt = db.prepare("SELECT stored_path, user_id FROM files WHERE id = ?");
+    const file = stmt.get(id) as { stored_path: string; user_id: string | null } | undefined;
 
     if (!file) {
       res.status(404).json({ error: "File not found" });
+      return;
+    }
+
+    if (file.user_id && file.user_id !== userId) {
+      res.status(403).json({ error: "Forbidden: You do not own this file" });
       return;
     }
 

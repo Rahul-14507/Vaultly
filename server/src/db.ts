@@ -20,6 +20,13 @@ export const db = new Database(path.join(dataDir, "vaultly.db"));
 db.pragma("journal_mode = WAL");
 
 db.exec(`
+  CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY,
+    username TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    created_at INTEGER NOT NULL
+  );
+
   CREATE TABLE IF NOT EXISTS pastes (
     id TEXT PRIMARY KEY,
     content TEXT NOT NULL,
@@ -40,3 +47,16 @@ db.exec(`
     downloads INTEGER DEFAULT 0
   );
 `);
+
+// Idempotent migrations for existing installations
+try {
+  db.exec("ALTER TABLE pastes ADD COLUMN user_id TEXT REFERENCES users(id)");
+} catch (e) {
+  // column already exists
+}
+
+try {
+  db.exec("ALTER TABLE files ADD COLUMN user_id TEXT REFERENCES users(id)");
+} catch (e) {
+  // column already exists
+}

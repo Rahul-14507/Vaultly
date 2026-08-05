@@ -10,7 +10,7 @@ import filesRouter from "./routes/files.js";
 import authRouter from "./routes/auth.js";
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
 // Enable CORS for frontend development server
 app.use(cors({

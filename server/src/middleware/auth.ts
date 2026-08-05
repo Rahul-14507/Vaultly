@@ -3,6 +3,8 @@ import jwt from "jsonwebtoken";
 
 export interface AuthenticatedRequest extends Request {
   user?: any;
+  userId?: string;
+  username?: string;
 }
 
 export function requireAuth(req: AuthenticatedRequest, res: Response, next: NextFunction) {
@@ -17,8 +19,10 @@ export function requireAuth(req: AuthenticatedRequest, res: Response, next: Next
   const jwtSecret = process.env.JWT_SECRET || "default-vaultly-secret-key";
 
   try {
-    const decoded = jwt.verify(token, jwtSecret);
+    const decoded = jwt.verify(token, jwtSecret) as { userId: string; username: string };
     req.user = decoded;
+    req.userId = decoded.userId;
+    req.username = decoded.username;
     next();
   } catch (err) {
     res.status(401).json({ error: "Unauthorized: Invalid or expired token" });

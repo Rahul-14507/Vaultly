@@ -8,8 +8,9 @@ interface SidebarProps {
   isAuthenticated: boolean;
   onLogout: () => void;
   token: string | null;
-  onItemUploaded: (item: RecentItem) => void;
+  onItemUploaded: () => void;
   onClose?: () => void;
+  username: string | null;
 }
 
 export default function Sidebar({
@@ -18,7 +19,8 @@ export default function Sidebar({
   onLogout,
   token,
   onItemUploaded,
-  onClose
+  onClose,
+  username
 }: SidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -65,12 +67,7 @@ export default function Sidebar({
       if (xhr.status === 201) {
         try {
           const res = JSON.parse(xhr.responseText);
-          onItemUploaded({
-            id: res.id,
-            type: "file",
-            name: file.name,
-            created_at: Date.now()
-          });
+          onItemUploaded();
           if (onClose) onClose();
           navigate(`/f/${res.id}`);
         } catch (e) {
@@ -296,12 +293,15 @@ export default function Sidebar({
           </button>
         ) : null}
         
-        <div className="flex items-center justify-between font-mono text-[10px] text-ui-textMuted px-2">
-          <span>HOST: LOCALHOST</span>
+        <div className="flex items-center justify-between font-mono text-[10px] text-ui-textMuted px-2 mb-1.5">
+          <span>USER: <span className="text-accent font-semibold">{username ? username.toUpperCase() : "ANONYMOUS"}</span></span>
           <span className="flex items-center gap-1">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
             ONLINE
           </span>
+        </div>
+        <div className="flex items-center justify-between font-mono text-[10px] text-ui-textMuted px-2">
+          <span>HOST: LOCALHOST</span>
         </div>
       </div>
     </aside>
