@@ -13,6 +13,9 @@ import "prismjs/components/prism-markup";
 import "prismjs/components/prism-css";
 import "prismjs/components/prism-bash";
 import "prismjs/components/prism-markdown";
+import "prismjs/components/prism-java";
+import "prismjs/components/prism-c";
+import "prismjs/components/prism-csharp";
 
 interface PasteData {
   id: string;

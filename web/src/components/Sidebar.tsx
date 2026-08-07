@@ -150,8 +150,16 @@ export default function Sidebar({
           </button>
         )}
       </div>
+      {/* Phone-hosted identity strip */}
+      <div className="px-4 py-2 border-b border-ui-border bg-accent-dim/10 shrink-0 flex items-center gap-2">
+        <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse shrink-0" />
+        <span className="font-mono text-[10px] text-accent/80 leading-tight">
+          Stored &amp; served from a phone
+        </span>
+      </div>
 
       {/* Primary Action Buttons */}
+
       <div className="p-3 shrink-0 space-y-2">
         {isAuthenticated ? (
           <>
